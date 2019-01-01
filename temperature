@@ -3,8 +3,8 @@
 import datetime
 
 import click
-import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
+import matplotlib.pyplot as plt
 import numpy as np
 import psycopg2 as db
 
@@ -71,8 +71,8 @@ def add(morning, evening, date):
     else:
         conn.commit()
         print('Record added')
-    finally:
         print(f'-> {cur.rowcount} row(s) affected.')
+    finally:
         conn.close()
 
 
@@ -118,9 +118,9 @@ def delete(date):
     conn.commit()
     if cur.rowcount:
         print(f"Deleted record with date '{date}'")
+        print(f'-> {cur.rowcount} row(s) affected.')
     else:
         print(f"No records with date '{date}'.")
-    print(f'-> {cur.rowcount} row(s) affected.')
     conn.close()
 
 
@@ -142,6 +142,7 @@ def plot():
     plt.gca().xaxis.set_major_locator(mdates.MonthLocator())
     plt.plot(dates, morning_data, label='Morning')
     plt.plot(dates, evening_data, label='Evening')
+    plt.axhline(98.6, alpha=0.15, linestyle='dashed', label='Normal')
     plt.gcf().autofmt_xdate()
 
     plt.title('Body temperature')
