@@ -1,0 +1,154 @@
+#!/usr/bin/env python3
+
+import datetime
+
+import click
+import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
+import numpy as np
+import psycopg2 as db
+
+
+@click.group()
+def action():
+    """Simple application to store morning and evening temperature records"""
+    pass
+
+
+@action.command()
+def initiate():
+    """Initiate database the first time"""
+    conn = db.connect(database='temperatures')
+    cur = conn.cursor()
+
+    try:
+        cur.execute(
+            '''
+            CREATE TABLE Temperature (
+                date_taken DATE PRIMARY KEY,
+                morning NUMERIC(3, 1),
+                evening NUMERIC(3, 1)
+            );
+            '''
+        )
+    except db.ProgrammingError:
+        conn.rollback()
+        print("Table named temperature already exists!")
+    else:
+        conn.commit()
+        print('Database successfully initiated!')
+    finally:
+        conn.close()
+
+
+@action.command()
+@click.option('-m', '--morning', nargs=1, 
+    help='Temperature in the morning')
+@click.option('-e', '--evening', nargs=1, 
+    help='Temperature in the evening')
+@click.option('-d', '--date', 
+    default=datetime.date.today(), nargs=1,
+    help='Date of observation')
+def add(morning, evening, date):
+    """Add a temperature record"""
+    conn = db.connect(database='temperatures')
+    cur = conn.cursor()
+
+    try:
+        cur.execute(
+            f'''
+            INSERT INTO Temperature VALUES (
+                '{date}',
+                '{morning}',
+                '{evening}'
+            )
+            '''
+        )
+        
+    except db.IntegrityError:
+        conn.rollback()
+        print(f'You already have an entry for {date}')
+    else:
+        conn.commit()
+        print('Record added')
+    finally:
+        print(f'-> {cur.rowcount} row(s) affected.')
+        conn.close()
+
+
+@action.command()
+def list():
+    """List all stored records"""
+    conn = db.connect(database='temperatures')
+    cur = conn.cursor()
+
+    cur.execute(
+        '''
+        SELECT * FROM Temperature;
+        '''
+    )
+    data = cur.fetchall()
+
+    for row in data:
+        pretty_format = '%b %d, %Y'
+        pretty_date = row[0].strftime(pretty_format)
+        print('Date:', pretty_date, end=' ; ')
+        print('Morning:', row[1], end=' ; ')
+        print('Evening:', row[2], end='\n')
+
+    conn.close()
+
+
+@action.command()
+@click.option('-d', '--date',
+    default=datetime.date.today(), 
+    nargs=1, 
+    help='Date whose record is to be deleted (defaults to today)')
+def delete(date):
+    """Delete a record on a given DATE"""
+    conn = db.connect(database='temperatures')
+    cur = conn.cursor()
+
+    cur.execute(
+        f'''
+        DELETE FROM Temperature WHERE date_taken = '{date}'
+        '''
+    )
+
+    conn.commit()
+    if cur.rowcount:
+        print(f"Deleted record with date '{date}'")
+    else:
+        print(f"No records with date '{date}'.")
+    print(f'-> {cur.rowcount} row(s) affected.')
+    conn.close()
+
+
+@action.command()
+def plot():
+    """Plot graphs of temperatures as a function of the observed days"""
+    conn = db.connect(database='temperatures')
+    cur = conn.cursor()
+
+    cur.execute('SELECT morning FROM Temperature ORDER BY date_taken;')
+    morning_data = np.array([float(data[0]) for data in cur.fetchall()])
+    cur.execute('SELECT evening FROM Temperature ORDER BY date_taken;')
+    evening_data = np.array([float(data[0]) for data in cur.fetchall()])
+    cur.execute('SELECT date_taken FROM Temperature ORDER BY date_taken')
+    dates = [row[0] for row in cur.fetchall()]
+    conn.close()
+
+    plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%b'))
+    plt.gca().xaxis.set_major_locator(mdates.MonthLocator())
+    plt.plot(dates, morning_data, label='Morning')
+    plt.plot(dates, evening_data, label='Evening')
+    plt.gcf().autofmt_xdate()
+
+    plt.title('Body temperature')
+    plt.legend()
+    plt.xlabel('Days')
+    plt.ylabel('Temperature (Celsius)')
+
+    plt.show()
+
+action()
