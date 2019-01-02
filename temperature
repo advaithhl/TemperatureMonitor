@@ -42,10 +42,8 @@ def initiate():
 
 
 @action.command()
-@click.option('-m', '--morning', nargs=1, 
-    help='Temperature in the morning')
-@click.option('-e', '--evening', nargs=1, 
-    help='Temperature in the evening')
+@click.argument('morning', nargs=1)
+@click.argument('evening', nargs=1)
 @click.option('-d', '--date', 
     default=datetime.date.today(), nargs=1,
     help='Date of observation')
