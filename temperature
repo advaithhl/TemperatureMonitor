@@ -123,7 +123,10 @@ def delete(date):
 
 
 @action.command()
-def plot():
+@click.option('--save',
+    is_flag=True,
+    help='Save the temperature plot as PNG image')
+def plot(save):
     """Plot graphs of temperatures as a function of the observed days"""
     conn = db.connect(database='temperatures')
     cur = conn.cursor()
@@ -148,6 +151,11 @@ def plot():
     plt.xlabel('Days')
     plt.ylabel('Temperature (Celsius)')
 
-    plt.show()
+    if save:
+        filename = 'temperature_' + str(datetime.date.today()) + '.png'
+        plt.savefig(filename, format='png')
+        print(f"Plot saved as '{filename}'")
+    else:
+        plt.show()
 
 action()
