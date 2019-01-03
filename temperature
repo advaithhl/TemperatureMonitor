@@ -139,12 +139,14 @@ def plot(save):
     dates = [row[0] for row in cur.fetchall()]
     conn.close()
 
-    plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%b'))
-    plt.gca().xaxis.set_major_locator(mdates.MonthLocator())
+    plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%b %d'))
+    plt.gca().xaxis.set_major_locator(mdates.WeekdayLocator())
     plt.plot(dates, morning_data, label='Morning')
     plt.plot(dates, evening_data, label='Evening')
-    plt.axhline(98.6, alpha=0.15, linestyle='dashed', label='Normal')
+    plt.axhline(98.6, alpha=0.7, linestyle='dashed', color='green', label='Normal')
     plt.gcf().autofmt_xdate()
+
+    plt.grid(axis='y', linestyle='dashed')
 
     plt.title('Body temperature')
     plt.legend()
