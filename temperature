@@ -81,16 +81,35 @@ def add(morning, evening, date):
 
 
 @action.command()
-def list():
+@click.option('-s', '--sort',
+    type=click.Choice(['date', 'morning', 'evening']),
+    default='date',
+    help='Sort records by date, morning or evening temperatures in'
+    ' descending order.'
+)
+@click.option('-a', '--asc',
+    is_flag=True,
+    help='Sort in ascending order, rather than descending.'
+)
+def list(sort, asc):
     """List all stored records"""
     conn = db.connect(database='temperatures')
     cur = conn.cursor()
 
-    cur.execute(
-        '''
-        SELECT * FROM Temperature;
-        '''
-    )
+    if asc:
+        order = 'ASC'
+    else:
+        order = 'DESC'
+
+    query = 'SELECT * FROM Temperature '
+    if sort == 'date':
+        query += f'ORDER BY date_taken {order};'
+    elif sort == 'evening':
+        query += f'ORDER BY evening {order};'
+    else:
+        query += f'ORDER BY morning {order};'
+
+    cur.execute(query)
     data = cur.fetchall()
 
     for row in data:
