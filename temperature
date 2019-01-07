@@ -91,7 +91,11 @@ def add(morning, evening, date):
     is_flag=True,
     help='Sort in ascending order, rather than descending.'
 )
-def list(sort, asc):
+@click.option('--csv', 'csv_handle',
+    type=click.File('w'),
+    help='Export results to CSV format.'
+)
+def list(sort, asc, csv_handle):
     """List all stored records"""
     conn = db.connect(database='temperatures')
     cur = conn.cursor()
@@ -112,12 +116,15 @@ def list(sort, asc):
     cur.execute(query)
     data = cur.fetchall()
 
-    for row in data:
-        pretty_format = '%b %d, %Y'
-        pretty_date = row[0].strftime(pretty_format)
-        print('Date:', pretty_date, end=' ; ')
-        print('Morning:', row[1], end=' ; ')
-        print('Evening:', row[2], end='\n')
+    if csv_handle:
+        write_csv(data, csv_handle)
+    else:
+        for row in data:
+            pretty_format = '%b %d, %Y'
+            pretty_date = row[0].strftime(pretty_format)
+            print('Date:', pretty_date, end=' ; ')
+            print('Morning:', row[1], end=' ; ')
+            print('Evening:', row[2], end='\n')
 
     conn.close()
 
@@ -189,5 +196,23 @@ def plot(save):
         print(f"Plot saved as '{filename}'")
     else:
         plt.show()
+
+
+def write_csv(data, csv_handle):
+    """
+    Write given data to the CSV file handle given.
+
+    :param data: Data fetched from the cursor as a result of a PostGres query.
+    :param csv_handle: File handle of the CSV file to export records to.
+    """
+    csv_handle.write('Date;Morning temperature;Evening temperature\n')
+
+    pretty_format = '%b %d, %Y'
+    for row in data:
+        pretty_date = row[0].strftime(pretty_format)
+        csv_handle.write(pretty_date+';'+str(row[1])+';'+str(row[2])+'\n')
+
+    csv_handle.close()
+    print(f"Successfully exported records to '{csv_handle.name}'")
 
 action()
